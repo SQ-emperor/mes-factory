@@ -1,0 +1,301 @@
+// MES Factory - 轻量级制造执行系统
+// 数据库 Schema 设计
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ 多租户基础 ============
+
+model Tenant {
+  id        String  @id @default(cuid())
+  name      String
+  industry  String? // 五金, 注塑, 电子, 等
+  plan      String  @default("free") // free | pro | enterprise
+  createdAt DateTime @default(now())
+
+  users         User[]
+  orders        Order[]
+  processes     Process[]
+  products      Product[]
+  machines      Machine[]
+  qualityRecords QualityRecord[]
+  qrCodes       QRCode[]
+}
+
+// ============ 认证 ============
+
+model User {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  phone      String   // 手机号，主要标识符
+  name       String
+  role       UserRole @default(worker) // admin | manager | worker
+  department String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  // NextAuth 关系
+  accounts Account[]
+  sessions Session[]
+
+  // 业务关系
+  workReports        WorkReport[]
+  qualityInspections QualityRecord[]
+  scheduleSlots      ScheduleSlot[]
+  assignedOrderItems OrderItem[]   @relation("OrderItemAssignedUser")
+
+  @@unique([tenantId, phone])
+}
+
+enum UserRole {
+  admin   // 工厂管理员
+  manager // 生产经理、质量经理
+  worker  // 一线工人
+}
+
+// ============ 产品 & 工序定义 ============
+
+model Product {
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  name         String
+  code         String        // 产品编码/SKU
+  unit         String        @default("件")
+  processSteps ProcessStep[]
+  orders       Order[]
+
+  @@unique([tenantId, code])
+}
+
+model Process {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  name            String        // 例：冲压、焊接、喷涂、组装
+  code            String
+  sortOrder       Int
+  standardTime    Float?        // 每件标准工时(秒)
+  requiresMachine Boolean       @default(false)
+  steps           ProcessStep[]
+
+  @@unique([tenantId, code])
+}
+
+model ProcessStep {
+  id         String  @id @default(cuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  processId  String
+  process    Process @relation(fields: [processId], references: [id])
+  sortOrder  Int
+  isRequired Boolean @default(true)
+
+  orderItems OrderItem[]
+
+  @@unique([productId, processId])
+}
+
+// ============ 设备/工位 ============
+
+model Machine {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  name     String
+  code     String
+  type     String?
+  isActive Boolean @default(true)
+
+  scheduleSlots ScheduleSlot[]
+
+  @@unique([tenantId, code])
+}
+
+// ============ 订单管理 ============
+
+model Order {
+  id           String      @id @default(cuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  orderNo      String      // 自动生成或手动
+  productId    String
+  product      Product     @relation(fields: [productId], references: [id])
+  quantity     Float
+  dueDate      DateTime?
+  priority     Int         @default(0) // 越大越紧急
+  status       OrderStatus @default(pending)
+  customerName String?
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  items          OrderItem[]
+  scheduleSlots  ScheduleSlot[]
+  qualityRecords QualityRecord[]
+
+  @@unique([tenantId, orderNo])
+}
+
+enum OrderStatus {
+  pending    // 待排产
+  scheduled  // 已排产
+  inProgress // 生产中
+  completed  // 已完成
+  shipped    // 已发货
+  cancelled  // 已取消
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id])
+  processStepId String
+  processStep   ProcessStep @relation(fields: [processStepId], references: [id])
+  status        ItemStatus @default(waiting)
+  assignedUserId String?
+  assignedUser  User?     @relation("OrderItemAssignedUser", fields: [assignedUserId], references: [id])
+  quantityDone  Float     @default(0)
+  quantityDefect Float    @default(0)
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  workReports WorkReport[]
+}
+
+enum ItemStatus {
+  waiting    // 待开工
+  inProgress // 加工中
+  completed  // 已完成
+  onHold     // 暂停
+}
+
+// ============ 扫码报工 ============
+
+model WorkReport {
+  id              String    @id @default(cuid())
+  orderItemId     String
+  orderItem       OrderItem @relation(fields: [orderItemId], references: [id])
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  machineId       String?
+  quantity        Float
+  defectCount     Float     @default(0)
+  defectType      String?
+  reportedAt      DateTime  @default(now())
+  // 离线同步支持
+  clientTimestamp DateTime?
+  deviceId        String?
+  isSynced        Boolean   @default(true)
+}
+
+// ============ 质量管理 ============
+
+model QualityRecord {
+  id           String           @id @default(cuid())
+  tenantId     String
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  orderId      String?
+  order        Order?           @relation(fields: [orderId], references: [id])
+  inspectorId  String
+  inspector    User             @relation(fields: [inspectorId], references: [id])
+  type         InspectionType   // incoming | inProcess | finished
+  result       InspectionResult
+  defectType   String?
+  defectCount  Float?
+  notes        String?
+  photos       String[]         // 图片URL
+  inspectedAt  DateTime         @default(now())
+}
+
+enum InspectionType {
+  incoming  // 来料检
+  inProcess // 过程检
+  finished  // 成品检
+}
+
+enum InspectionResult {
+  pass        // 合格
+  fail        // 不合格
+  conditional // 让步接收
+}
+
+// ============ AI 排产 ============
+
+model ScheduleSlot {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  machineId     String?
+  machine       Machine? @relation(fields: [machineId], references: [id])
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  startTime     DateTime
+  endTime       DateTime
+  isAiGenerated Boolean @default(true)
+  createdAt     DateTime @default(now())
+}
+
+// ============ 二维码注册表 ============
+
+model QRCode {
+  id        String  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  code      String  @unique // 实际编码值
+  type      QRType  // order | workstation | material | employee
+  refId     String? // 引用实体的ID
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+
+enum QRType {
+  order       // 订单二维码
+  workstation // 工位二维码
+  material    // 物料批次二维码
+  employee    // 员工工牌二维码
+}
+
+// ============ NextAuth 账户模型 ============
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
