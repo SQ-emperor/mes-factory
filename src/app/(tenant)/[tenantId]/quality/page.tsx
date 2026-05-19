@@ -67,7 +67,7 @@ export default async function QualityPage({
           <h1 className="text-2xl font-bold">质量管理</h1>
           <p className="text-gray-500">检验记录与质量分析</p>
         </div>
-        <Link href={`${tenantId}/quality/inspect`}>
+        <Link href={`/${tenantId}/quality/inspect`}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             新建检验

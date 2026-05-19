@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,15 @@ export default function LoginPage() {
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState("");
+  const [callbackUrl, setCallbackUrl] = useState("/");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "CredentialsSignin") {
+      setError("验证码错误或手机号未注册");
+    }
+    setCallbackUrl(params.get("callbackUrl") || "/");
+  }, []);
 
   const sendCode = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
@@ -64,24 +74,17 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    try {
-      const { signIn } = await import("next-auth/react");
-      const result = await signIn("credentials", {
-        phone,
-        code,
-        redirect: false,
-      });
+    const result = await signIn("credentials", {
+      phone,
+      code,
+      redirect: false,
+    });
 
-      if (result?.error) {
-        setError("验证码错误或已过期");
-      } else {
-        router.push("/");
-        router.refresh();
-      }
-    } catch {
-      setError("登录失败");
-    } finally {
+    if (result?.error) {
+      setError("验证码错误或手机号未注册");
       setLoading(false);
+    } else {
+      router.push(callbackUrl);
     }
   };
 

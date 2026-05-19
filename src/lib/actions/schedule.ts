@@ -137,7 +137,12 @@ export async function autoSchedule() {
   const workerAvailability = new Map<string, Date>();
   workers.forEach((w) => workerAvailability.set(w.id, currentTime));
 
+  // 记录每个订单的预计完成时间
+  const orderEstimates: { orderNo: string; productName: string; estimatedCompletion: Date }[] = [];
+
   for (const order of pendingOrders) {
+    let orderLastEndTime = currentTime;
+
     for (const item of order.items) {
       const standardTime = item.processStep.process.standardTime || 60; // 默认60秒/件
       const durationMs = order.quantity * standardTime * 1000;
@@ -191,8 +196,18 @@ export async function autoSchedule() {
         if (bestWorkerId) {
           workerAvailability.set(bestWorkerId, endTime);
         }
+
+        if (endTime > orderLastEndTime) {
+          orderLastEndTime = endTime;
+        }
       }
     }
+
+    orderEstimates.push({
+      orderNo: order.orderNo,
+      productName: order.product.name,
+      estimatedCompletion: orderLastEndTime,
+    });
 
     // 更新订单状态
     await prisma.order.update({
@@ -207,6 +222,7 @@ export async function autoSchedule() {
   return {
     message: `成功排产 ${newSchedules.length} 个工序`,
     schedules: newSchedules,
+    orderEstimates,
   };
 }
 

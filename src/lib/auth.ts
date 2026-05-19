@@ -43,16 +43,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           phone: user.phone,
           tenantId: user.tenantId,
           role: user.role,
+          department: user.department,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.tenantId = user.tenantId;
         token.role = user.role;
         token.phone = user.phone;
+        token.department = user.department;
+      }
+      if (trigger === "update" && session) {
+        token.name = session.user.name;
+        token.department = session.user.department;
       }
       return token;
     },
@@ -62,8 +68,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.tenantId = token.tenantId as string;
         session.user.role = token.role as string;
         session.user.phone = token.phone as string;
+        session.user.department = token.department as string | null;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // 允许同源重定向
+      if (url.startsWith("/")) return url;
+      // 允许当前 host 的重定向（解决 0.0.0.0 问题）
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.port === new URL(baseUrl).port) {
+          return url;
+        }
+      } catch {}
+      return baseUrl;
     },
   },
   pages: {
@@ -73,6 +92,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30天
   },
+  trustHost: true,
 });
 
 // 发送验证码（MVP阶段模拟）
@@ -94,6 +114,7 @@ declare module "next-auth" {
     tenantId?: string;
     role?: string;
     phone?: string;
+    department?: string | null;
   }
 }
 
@@ -107,6 +128,7 @@ declare module "next-auth" {
       tenantId: string;
       role: string;
       phone: string;
+      department?: string | null;
     };
   }
 }

@@ -71,7 +71,7 @@ export default async function OrdersPage({
           <h1 className="text-2xl font-bold">订单管理</h1>
           <p className="text-gray-500">管理生产订单和进度</p>
         </div>
-        <Link href="orders/new">
+        <Link href={`/${tenantId}/orders/new`}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             新建订单
@@ -174,7 +174,7 @@ export default async function OrdersPage({
                 )}
 
                 <div className="mt-4 pt-4 border-t flex gap-2">
-                  <Link href={`${tenantId}/orders/${order.id}`}>
+                  <Link href={`/${tenantId}/orders/${order.id}`}>
                     <Button variant="outline" size="sm">
                       查看详情
                     </Button>

@@ -1,4 +1,4 @@
-const CACHE_NAME = "mes-factory-v1";
+const CACHE_NAME = "mes-factory-v3";
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -74,7 +74,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 静态资源：cache-first
+  // 静态资源：network-first（优先用最新代码，避免缓存旧版本）
   if (
     url.pathname.startsWith("/_next/") ||
     url.pathname.endsWith(".js") ||
@@ -83,16 +83,17 @@ self.addEventListener("fetch", (event) => {
     url.pathname.endsWith(".svg")
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
+      fetch(request)
+        .then((response) => {
           if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
-        });
-      })
+        })
+        .catch(() => {
+          return caches.match(request);
+        })
     );
     return;
   }
