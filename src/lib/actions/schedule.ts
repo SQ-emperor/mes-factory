@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { requireMinRole } from "@/lib/role";
 
 // 获取排产数据
 export async function getScheduleData(startDate?: Date, endDate?: Date) {
@@ -79,6 +80,8 @@ export async function autoSchedule() {
   if (!session?.user) {
     throw new Error("未登录");
   }
+
+  requireMinRole(session.user.role, "manager");
 
   const { tenantId } = session.user;
 
@@ -232,6 +235,8 @@ export async function clearSchedule() {
   if (!session?.user) {
     throw new Error("未登录");
   }
+
+  requireMinRole(session.user.role, "manager");
 
   const { tenantId } = session.user;
 

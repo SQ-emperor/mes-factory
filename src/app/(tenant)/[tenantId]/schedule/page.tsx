@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Calendar, Trash2, RefreshCw } from "lucide-react";
+import { Sparkles, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import {
@@ -61,12 +61,21 @@ export default function SchedulePage() {
   const [schedules, setSchedules] = useState<ScheduleSlot[]>([]);
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
   const [orderEstimates, setOrderEstimates] = useState<OrderEstimate[]>([]);
+  const [startDate, setStartDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  // 计算日期范围（从选定日期开始的7天）
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 7);
+  const weekLabel = `${startDate.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })} - ${endDate.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}`;
 
   // 加载数据
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getScheduleData();
+      const data = await getScheduleData(startDate);
       setMachines(data.machines);
       setSchedules(data.schedules as any);
       setPendingOrders(data.pendingOrders as any);
@@ -79,7 +88,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [startDate]);
 
   // AI 自动排产
   const handleAutoSchedule = async () => {
@@ -127,16 +136,17 @@ export default function SchedulePage() {
   const getDateHeaders = () => {
     const headers = [];
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
       headers.push({
         date: date.toLocaleDateString("zh-CN", {
           month: "numeric",
           day: "numeric",
         }),
         weekday: date.toLocaleDateString("zh-CN", { weekday: "short" }),
-        isToday: i === 0,
+        isToday: date.getTime() === today.getTime(),
       });
     }
     return headers;
@@ -190,11 +200,17 @@ export default function SchedulePage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">生产排程</CardTitle>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">本周</Badge>
-              <Button variant="outline" size="sm">
-                <Calendar className="h-4 w-4 mr-1" />
-                选择日期
-              </Button>
+              <Badge variant="outline">{weekLabel}</Badge>
+              <input
+                type="date"
+                className="border rounded-md px-2 py-1.5 text-sm"
+                value={startDate.toISOString().slice(0, 10)}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setStartDate(new Date(e.target.value));
+                  }
+                }}
+              />
             </div>
           </div>
         </CardHeader>

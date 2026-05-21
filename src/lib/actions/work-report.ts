@@ -207,6 +207,66 @@ async function processOrderWorkReport(data: {
   };
 }
 
+// 获取活跃订单列表（用于手动选择报工）
+export async function getActiveOrdersForScan() {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error("未登录");
+  }
+
+  const { tenantId } = session.user;
+
+  const orders = await prisma.order.findMany({
+    where: {
+      tenantId,
+      status: { in: ["pending", "scheduled", "inProgress"] },
+    },
+    include: {
+      product: true,
+      items: {
+        include: {
+          processStep: {
+            include: {
+              process: true,
+            },
+          },
+        },
+        orderBy: {
+          processStep: { sortOrder: "asc" },
+        },
+      },
+    },
+    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+    take: 50,
+  });
+
+  return orders.map((order) => {
+    const currentItem = order.items.find(
+      (item) => item.status === "inProgress" || item.status === "waiting"
+    );
+    const completedSteps = order.items.filter((i) => i.status === "completed").length;
+
+    return {
+      id: order.id,
+      orderNo: order.orderNo,
+      productName: order.product.name,
+      quantity: order.quantity,
+      status: order.status,
+      currentStep: currentItem
+        ? {
+            id: currentItem.id,
+            name: currentItem.processStep.process.name,
+            sortOrder: currentItem.processStep.sortOrder,
+            quantityDone: currentItem.quantityDone,
+          }
+        : null,
+      totalSteps: order.items.length,
+      completedSteps,
+      customerName: order.customerName,
+    };
+  });
+}
+
 // 获取订单当前状态（扫码后显示）
 export async function getOrderScanInfo(qrCode: string) {
   const session = await auth();

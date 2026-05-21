@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getOrders } from "@/lib/actions/order";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { OrderStatusButton } from "@/components/order-status-button";
 
 // 状态标签颜色映射
 const statusColors: Record<string, string> = {
@@ -180,7 +181,12 @@ export default async function OrdersPage({
                     </Button>
                   </Link>
                   {order.status === "pending" && (
-                    <Button size="sm">开始生产</Button>
+                    <OrderStatusButton
+                      orderId={order.id}
+                      status="inProgress"
+                      label="开始生产"
+                      size="sm"
+                    />
                   )}
                 </div>
               </CardContent>

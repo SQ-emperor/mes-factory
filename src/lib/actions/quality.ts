@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { requireMinRole } from "@/lib/role";
 
 // 创建质检记录
 export async function createQualityRecord(data: {
@@ -18,6 +19,8 @@ export async function createQualityRecord(data: {
   if (!session?.user) {
     throw new Error("未登录");
   }
+
+  requireMinRole(session.user.role, "manager");
 
   const { tenantId, id: inspectorId } = session.user;
 

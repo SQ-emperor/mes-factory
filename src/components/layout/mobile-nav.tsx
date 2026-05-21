@@ -8,6 +8,8 @@ import {
   LayoutDashboard,
   ClipboardList,
   QrCode,
+  CalendarClock,
+  ShieldCheck,
   Settings,
   UsersRound,
 } from "lucide-react";
@@ -27,8 +29,10 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "看板", icon: LayoutDashboard },
   { href: "/orders", label: "订单", icon: ClipboardList },
   { href: "/scan", label: "报工", icon: QrCode },
+  { href: "/schedule", label: "排产", icon: CalendarClock, minRole: "manager" },
+  { href: "/quality", label: "质检", icon: ShieldCheck, minRole: "manager" },
   { href: "/users", label: "人员", icon: UsersRound, minRole: "manager" },
-  { href: "/settings", label: "我的", icon: Settings },
+  { href: "/settings", label: "我的", icon: Settings, minRole: "manager" },
 ];
 
 const ROLE_LEVEL: Record<string, number> = { admin: 3, manager: 2, worker: 1 };

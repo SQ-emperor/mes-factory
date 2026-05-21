@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,12 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  List,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { getOrderScanInfo, submitWorkReport } from "@/lib/actions/work-report";
+import { getOrderScanInfo, submitWorkReport, getActiveOrdersForScan } from "@/lib/actions/work-report";
 import { useScan } from "@/hooks/use-scan";
 import { useOffline } from "@/hooks/use-offline";
 
@@ -58,6 +61,24 @@ export default function ScanPage() {
     offline?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"scan" | "select">("scan");
+  const [activeOrders, setActiveOrders] = useState<Awaited<
+    ReturnType<typeof getActiveOrdersForScan>
+  > | null>(null);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderSearch, setOrderSearch] = useState("");
+
+  const fetchActiveOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    try {
+      const orders = await getActiveOrdersForScan();
+      setActiveOrders(orders);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "加载订单失败");
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, []);
 
   // 处理扫码结果
   useEffect(() => {
@@ -102,6 +123,13 @@ export default function ScanPage() {
     }
     handleScanResult(manualCode);
     setManualCode("");
+  };
+
+  // 从订单列表选择
+  const handleSelectOrder = (orderId: string) => {
+    const qrCode = `mes://${tenantId}/order/${orderId}`;
+    handleScanResult(qrCode);
+    setMode("scan");
   };
 
   // 提交报工
@@ -220,8 +248,41 @@ export default function ScanPage() {
         </Card>
       )}
 
-      {/* 扫码区域 */}
+      {/* 模式切换 */}
       {!scanResult && !submitted && (
+        <div className="flex bg-gray-100 rounded-lg p-1">
+          <button
+            type="button"
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-colors ${
+              mode === "scan"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500"
+            }`}
+            onClick={() => setMode("scan")}
+          >
+            <QrCode className="h-4 w-4" />
+            扫码报工
+          </button>
+          <button
+            type="button"
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-colors ${
+              mode === "select"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500"
+            }`}
+            onClick={() => {
+              setMode("select");
+              if (!activeOrders) fetchActiveOrders();
+            }}
+          >
+            <List className="h-4 w-4" />
+            选择订单
+          </button>
+        </div>
+      )}
+
+      {/* 扫码区域 */}
+      {!scanResult && !submitted && mode === "scan" && (
         <Card>
           <CardContent className="py-12">
             <div className="text-center space-y-6">
@@ -282,6 +343,86 @@ export default function ScanPage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 选择订单列表 */}
+      {!scanResult && !submitted && mode === "select" && (
+        <Card>
+          <CardContent className="py-4 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="搜索订单号或产品名称..."
+                className="pl-10"
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+              />
+            </div>
+
+            {loadingOrders ? (
+              <div className="text-center py-8 text-gray-500">加载中...</div>
+            ) : !activeOrders || activeOrders.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                暂无进行中的订单
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {activeOrders
+                  .filter(
+                    (o) =>
+                      !orderSearch ||
+                      o.orderNo.toLowerCase().includes(orderSearch.toLowerCase()) ||
+                      o.productName.toLowerCase().includes(orderSearch.toLowerCase())
+                  )
+                  .map((order) => (
+                    <button
+                      key={order.id}
+                      type="button"
+                      className="w-full text-left p-4 rounded-lg border hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center justify-between"
+                      onClick={() => handleSelectOrder(order.id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium truncate">{order.orderNo}</span>
+                          <Badge
+                            className={
+                              order.status === "inProgress"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : order.status === "scheduled"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-gray-100 text-gray-700"
+                            }
+                          >
+                            {order.status === "inProgress"
+                              ? "生产中"
+                              : order.status === "scheduled"
+                                ? "已排产"
+                                : "待排产"}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-600 truncate">
+                          {order.productName} · {order.quantity}件
+                        </div>
+                        {order.currentStep && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            当前工序: {order.currentStep.name}
+                            {order.currentStep.quantityDone > 0 &&
+                              ` (已完成 ${order.currentStep.quantityDone})`}
+                          </div>
+                        )}
+                        {order.customerName && (
+                          <div className="text-xs text-gray-400 mt-0.5 truncate">
+                            客户: {order.customerName}
+                          </div>
+                        )}
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-300 flex-shrink-0 ml-2" />
+                    </button>
+                  ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -350,7 +491,7 @@ export default function ScanPage() {
             {/* 操作按钮 */}
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={handleReset}>
-                重新扫描
+                返回
               </Button>
               <Button
                 className="flex-1"

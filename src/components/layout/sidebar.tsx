@@ -22,17 +22,17 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  minRole?: string; // 最低角色要求
+  minRole?: string;
 }
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "数据看板", icon: LayoutDashboard },
   { href: "/orders", label: "订单管理", icon: ClipboardList },
   { href: "/scan", label: "扫码报工", icon: QrCode },
-  { href: "/schedule", label: "排产计划", icon: CalendarClock },
-  { href: "/quality", label: "质量管理", icon: ShieldCheck },
+  { href: "/schedule", label: "排产计划", icon: CalendarClock, minRole: "manager" },
+  { href: "/quality", label: "质量管理", icon: ShieldCheck, minRole: "manager" },
   { href: "/users", label: "人员管理", icon: UsersRound, minRole: "manager" },
-  { href: "/settings", label: "系统设置", icon: Settings },
+  { href: "/settings", label: "系统设置", icon: Settings, minRole: "manager" },
 ];
 
 const ROLE_LEVEL: Record<string, number> = { admin: 3, manager: 2, worker: 1 };

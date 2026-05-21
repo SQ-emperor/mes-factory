@@ -3,14 +3,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-
-const ROLE_LEVEL: Record<string, number> = { admin: 3, manager: 2, worker: 1 };
-
-function requireRole(role: string, minRole: string) {
-  if ((ROLE_LEVEL[role] || 0) < (ROLE_LEVEL[minRole] || 0)) {
-    throw new Error("无权操作");
-  }
-}
+import { ROLE_LEVEL, requireMinRole } from "@/lib/role";
 
 // ==================== 产品管理 ====================
 
@@ -38,6 +31,7 @@ export async function createProduct(data: {
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "manager");
 
   const product = await prisma.product.create({
     data: {
@@ -66,6 +60,7 @@ export async function createProduct(data: {
 export async function deleteProduct(id: string) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "admin");
 
   await prisma.product.delete({
     where: { id, tenantId: session.user.tenantId },
@@ -94,6 +89,7 @@ export async function createProcess(data: {
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "manager");
 
   // 获取当前最大排序号
   const maxOrder = await prisma.process.findFirst({
@@ -120,6 +116,7 @@ export async function createProcess(data: {
 export async function deleteProcess(id: string) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "admin");
 
   await prisma.process.delete({
     where: { id, tenantId: session.user.tenantId },
@@ -147,6 +144,7 @@ export async function createMachine(data: {
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "manager");
 
   const machine = await prisma.machine.create({
     data: {
@@ -164,6 +162,7 @@ export async function createMachine(data: {
 export async function deleteMachine(id: string) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "admin");
 
   await prisma.machine.delete({
     where: { id, tenantId: session.user.tenantId },
@@ -177,6 +176,7 @@ export async function deleteMachine(id: string) {
 export async function getUsers() {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireMinRole(session.user.role, "manager");
 
   return prisma.user.findMany({
     where: { tenantId: session.user.tenantId },
@@ -192,7 +192,7 @@ export async function createUser(data: {
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
-  requireRole(session.user.role, "manager");
+  requireMinRole(session.user.role, "manager");
 
   // 不能创建同级或更高级角色
   if ((ROLE_LEVEL[data.role] || 0) >= (ROLE_LEVEL[session.user.role] || 0)) {
@@ -230,7 +230,7 @@ export async function createUser(data: {
 export async function deleteUser(id: string) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
-  requireRole(session.user.role, "manager");
+  requireMinRole(session.user.role, "manager");
 
   // 不能删除自己
   if (id === session.user.id) {

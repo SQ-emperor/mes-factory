@@ -252,7 +252,7 @@ export default function QRCodesPage() {
                     className="w-32 h-32 mx-auto"
                   />
                   <div className="mt-2 font-bold text-sm">{item.name}</div>
-                  <div className="text-xs text-gray-500 mt-1 truncate">
+                  <div className="text-xs text-gray-500 mt-1 break-all">
                     {item.code}
                   </div>
                   <Button

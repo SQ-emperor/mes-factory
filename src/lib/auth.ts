@@ -105,8 +105,6 @@ export async function sendVerificationCode(phone: string): Promise<boolean> {
     expires: Date.now() + 5 * 60 * 1000, // 5分钟有效
   });
 
-  // MVP阶段：控制台输出验证码，方便测试
-  console.log(`[SMS] 发送验证码到 ${phone}: ${code}`);
   return true;
 }
 

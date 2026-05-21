@@ -4,16 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
-
-const ROLE_LEVEL: Record<string, number> = {
-  admin: 3,
-  manager: 2,
-  worker: 1,
-};
-
-function canManage(myRole: string, targetRole: string): boolean {
-  return (ROLE_LEVEL[myRole] || 0) > (ROLE_LEVEL[targetRole] || 0);
-}
+import { ROLE_LEVEL, canManage } from "@/lib/role";
 
 export async function updateUserProfile(formData: FormData) {
   const session = await auth();

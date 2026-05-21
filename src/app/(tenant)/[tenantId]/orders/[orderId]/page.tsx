@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getOrder } from "@/lib/actions/order";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { OrderStatusButton } from "@/components/order-status-button";
 
 // 状态标签颜色映射
 const statusColors: Record<string, string> = {
@@ -270,12 +271,21 @@ export default async function OrderDetailPage({
       {/* 操作按钮 */}
       <div className="flex gap-4">
         {order.status === "pending" && (
-          <Button className="flex-1">开始生产</Button>
+          <OrderStatusButton
+            orderId={order.id}
+            status="inProgress"
+            label="开始生产"
+            className="flex-1"
+          />
         )}
         {order.status === "inProgress" && (
-          <Button variant="outline" className="flex-1">
-            暂停订单
-          </Button>
+          <OrderStatusButton
+            orderId={order.id}
+            status="pending"
+            label="暂停订单"
+            variant="outline"
+            className="flex-1"
+          />
         )}
         <Link href={`/${tenantId}/orders`} className="flex-1">
           <Button variant="outline" className="w-full">

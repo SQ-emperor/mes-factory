@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { requireMinRole } from "@/lib/role";
 
 // 获取订单列表
 export async function getOrders(options?: {
@@ -143,6 +144,8 @@ export async function createOrder(data: {
     throw new Error("未登录");
   }
 
+  requireMinRole(session.user.role, "manager");
+
   const { tenantId } = session.user;
 
   // 获取产品的工序步骤
@@ -212,6 +215,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
   if (!session?.user) {
     throw new Error("未登录");
   }
+
+  requireMinRole(session.user.role, "manager");
 
   const { tenantId } = session.user;
 
