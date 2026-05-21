@@ -89,8 +89,30 @@ export function useScan() {
 
         return null;
       } catch (error: any) {
-        const errorMsg =
-          error?.message || "无法启动摄像头，请检查权限设置";
+        const rawMsg = error?.message || error?.toString() || "";
+        console.error("[useScan] Camera error:", error?.name, rawMsg);
+
+        // 检测各种可能的错误类型
+        const isNotAllowed =
+          error?.name === "NotAllowedError" ||
+          error instanceof DOMException ||
+          rawMsg.includes("NotAllowed") ||
+          rawMsg.includes("Permission") ||
+          rawMsg.includes("permission") ||
+          rawMsg.includes("denied") ||
+          rawMsg.includes("NotReadable") ||
+          rawMsg.includes("NotFound") ||
+          rawMsg.includes("streaming") ||
+          rawMsg.includes("not supported");
+
+        let errorMsg: string;
+        if (isNotAllowed) {
+          errorMsg =
+            "摄像头需要 HTTPS 安全连接。当前通过 HTTP 局域网访问，浏览器禁止使用摄像头。请使用下方「手动输入」功能扫码。";
+        } else {
+          errorMsg = rawMsg || "无法启动摄像头，请检查权限设置";
+        }
+
         setState({ isScanning: false, error: errorMsg, scanResult: null });
         return null;
       }

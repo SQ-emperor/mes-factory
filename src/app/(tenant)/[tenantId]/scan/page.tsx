@@ -42,7 +42,7 @@ export default function ScanPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
 
-  const { isScanning, scanResult: scannedCode, startScan, reset: resetScan, manualInput, isWeChat } = useScan();
+  const { isScanning, scanResult: scannedCode, error: scanError, startScan, reset: resetScan, manualInput, isWeChat } = useScan();
   const { isOnline, pendingCount, syncing, saveOffline, syncNow } = useOffline();
 
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -241,9 +241,15 @@ export default function ScanPage() {
               <div id="qr-reader" className="w-full max-w-xs mx-auto" />
 
               <div className="space-y-3">
-                <Button
-                  size="lg"
-                  className="w-full"
+                {scanError && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                    {scanError}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground h-12 px-4 text-sm font-medium transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
                   onClick={() => startScan("qr-reader")}
                   disabled={isScanning || loading}
                 >
@@ -253,7 +259,7 @@ export default function ScanPage() {
                     : isWeChat
                       ? "打开微信扫码"
                       : "打开摄像头扫描"}
-                </Button>
+                </button>
 
                 <div className="text-sm text-gray-400">或</div>
 

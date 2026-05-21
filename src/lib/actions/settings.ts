@@ -4,6 +4,14 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
+const ROLE_LEVEL: Record<string, number> = { admin: 3, manager: 2, worker: 1 };
+
+function requireRole(role: string, minRole: string) {
+  if ((ROLE_LEVEL[role] || 0) < (ROLE_LEVEL[minRole] || 0)) {
+    throw new Error("无权操作");
+  }
+}
+
 // ==================== 产品管理 ====================
 
 export async function getProducts() {
@@ -184,6 +192,12 @@ export async function createUser(data: {
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireRole(session.user.role, "manager");
+
+  // 不能创建同级或更高级角色
+  if ((ROLE_LEVEL[data.role] || 0) >= (ROLE_LEVEL[session.user.role] || 0)) {
+    throw new Error("无权设置该角色");
+  }
 
   // 检查手机号是否已存在
   const existing = await prisma.user.findUnique({
@@ -216,10 +230,23 @@ export async function createUser(data: {
 export async function deleteUser(id: string) {
   const session = await auth();
   if (!session?.user) throw new Error("未登录");
+  requireRole(session.user.role, "manager");
 
   // 不能删除自己
   if (id === session.user.id) {
     throw new Error("不能删除当前登录用户");
+  }
+
+  // 不能删除同级或更高级角色
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true, tenantId: true },
+  });
+  if (!target || target.tenantId !== session.user.tenantId) {
+    throw new Error("用户不存在");
+  }
+  if ((ROLE_LEVEL[target.role] || 0) >= (ROLE_LEVEL[session.user.role] || 0)) {
+    throw new Error("无权删除该用户");
   }
 
   await prisma.user.delete({

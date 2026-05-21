@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, Factory, Users, Cog, Package, QrCode } from "lucide-react";
 
 const settingsItems = [

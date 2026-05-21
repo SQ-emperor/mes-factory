@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // 不需要认证的路径
-const publicPaths = ["/login", "/api/auth", "/api/sms"];
+const publicPaths = ["/login", "/register", "/api/auth", "/api/sms", "/api/login"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -1,7 +1,6 @@
-const CACHE_NAME = "mes-factory-v3";
+const CACHE_NAME = "mes-factory-v6";
 const STATIC_ASSETS = [
   "/",
-  "/login",
   "/manifest.json",
 ];
 

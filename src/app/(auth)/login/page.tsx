@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { loginAction } from "@/lib/actions/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,14 +16,12 @@ export default function LoginPage() {
   const [sending, setSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState("");
-  const [callbackUrl, setCallbackUrl] = useState("/");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("error") === "CredentialsSignin") {
       setError("验证码错误或手机号未注册");
     }
-    setCallbackUrl(params.get("callbackUrl") || "/");
   }, []);
 
   const sendCode = async () => {
@@ -64,8 +62,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doLogin = async () => {
     if (!phone || !code) {
       setError("请填写完整信息");
       return;
@@ -74,17 +71,19 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      phone,
-      code,
-      redirect: false,
-    });
+    try {
+      const result = await loginAction(phone, code);
 
-    if (result?.error) {
-      setError("验证码错误或手机号未注册");
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch {
+      setError("登录失败，请检查网络");
       setLoading(false);
-    } else {
-      router.push(callbackUrl);
     }
   };
 
@@ -96,7 +95,11 @@ export default function LoginPage() {
           <CardDescription>轻量级制造执行系统</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => { if (e.key === "Enter") doLogin(); }}
+            className="space-y-4"
+          >
             <div className="space-y-2">
               <Label htmlFor="phone">手机号</Label>
               <Input
@@ -134,12 +137,24 @@ export default function LoginPage() {
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <button
+              type="button"
+              onClick={doLogin}
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground h-10 px-2.5 text-sm font-medium transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+            >
               {loading ? "登录中..." : "登录"}
-            </Button>
+            </button>
 
             <p className="text-xs text-gray-500 text-center mt-4">
               测试验证码：000000
+            </p>
+
+            <p className="text-sm text-gray-500 text-center">
+              还没有账号？{" "}
+              <a href="/register" className="text-primary hover:underline">
+                注册账号
+              </a>
             </p>
           </form>
         </CardContent>

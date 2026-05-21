@@ -14,15 +14,21 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, User } from "lucide-react";
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: "管理员",
+  manager: "经理",
+  worker: "工人",
+};
+
 export function Header() {
   const { data: session } = useSession();
   const router = useRouter();
   const params = useParams();
   const tenantId = params?.tenantId as string;
 
-  if (!session?.user) return null;
-
-  const initials = session.user.name?.charAt(0) || session.user.phone?.slice(-4) || "U";
+  const initials = session?.user
+    ? (session.user.name?.charAt(0) || session.user.phone?.slice(-4) || "U")
+    : "?";
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-white px-4 lg:px-6">
@@ -41,8 +47,12 @@ export function Header() {
           <DropdownMenuGroup>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{session.user.name}</p>
-                <p className="text-xs text-muted-foreground">{session.user.phone}</p>
+                <p className="text-sm font-medium">
+                  {session?.user?.name || session?.user?.phone || "用户"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {session?.user?.role ? ROLE_LABELS[session.user.role] : ""}
+                </p>
               </div>
             </DropdownMenuLabel>
           </DropdownMenuGroup>
