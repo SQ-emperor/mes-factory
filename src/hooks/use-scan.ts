@@ -92,25 +92,22 @@ export function useScan() {
         const rawMsg = error?.message || error?.toString() || "";
         console.error("[useScan] Camera error:", error?.name, rawMsg);
 
-        // 检测各种可能的错误类型
-        const isNotAllowed =
-          error?.name === "NotAllowedError" ||
-          error instanceof DOMException ||
-          rawMsg.includes("NotAllowed") ||
-          rawMsg.includes("Permission") ||
-          rawMsg.includes("permission") ||
-          rawMsg.includes("denied") ||
-          rawMsg.includes("NotReadable") ||
-          rawMsg.includes("NotFound") ||
-          rawMsg.includes("streaming") ||
-          rawMsg.includes("not supported");
+        const isHttpNonLocal =
+          typeof window !== "undefined" &&
+          window.location.protocol === "http:" &&
+          window.location.hostname !== "localhost" &&
+          window.location.hostname !== "127.0.0.1";
 
         let errorMsg: string;
-        if (isNotAllowed) {
+        if (isHttpNonLocal) {
           errorMsg =
             "摄像头需要 HTTPS 安全连接。当前通过 HTTP 局域网访问，浏览器禁止使用摄像头。请使用下方「手动输入」功能扫码。";
+        } else if (error?.name === "NotAllowedError" || rawMsg.includes("Permission")) {
+          errorMsg =
+            "摄像头权限被拒绝，请在浏览器设置中允许摄像头访问，然后刷新页面重试。";
         } else {
-          errorMsg = rawMsg || "无法启动摄像头，请检查权限设置";
+          errorMsg =
+            "无法启动摄像头：" + (rawMsg || "未知错误") + "，请使用下方「手动输入」功能扫码。";
         }
 
         setState({ isScanning: false, error: errorMsg, scanResult: null });
