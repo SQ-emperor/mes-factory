@@ -114,8 +114,8 @@ export function AiChat() {
                   <Bot className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">厂里通 AI 助手</h3>
-                  <p className="text-xs text-blue-100">基于 DeepSeek 大模型</p>
+                  <h3 className="font-semibold text-sm">厂里通 AI 助手 v2</h3>
+                  <p className="text-xs text-blue-100">基于 DeepSeek 大模型 · 智能分析</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
