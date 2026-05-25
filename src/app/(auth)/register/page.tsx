@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -13,9 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTenants, registerUser } from "@/lib/actions/register";
 import { loginAction } from "@/lib/actions/auth";
+import {
+  Factory,
+  User,
+  Phone,
+  Building2,
+  ArrowRight,
+  Loader2,
+  ArrowLeft,
+} from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -33,7 +39,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getTenants().then(setTenants).catch(() => setError("加载工厂列表失败"));
+    getTenants()
+      .then(setTenants)
+      .catch(() => setError("加载工厂列表失败"));
   }, []);
 
   const doRegister = async () => {
@@ -52,7 +60,6 @@ export default function RegisterPage() {
         setError(result.error);
         setLoading(false);
       } else {
-        // 注册成功后直接用万能验证码自动登录
         const loginResult = await loginAction(phone, "000000");
         if (loginResult.error) {
           router.push("/login");
@@ -68,44 +75,80 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">注册账号</CardTitle>
-          <CardDescription>加入工厂，开始使用厂里通</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="name">姓名</Label>
-              <Input
-                id="name"
-                placeholder="请输入姓名"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-4 relative overflow-hidden">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-4 shadow-lg">
+            <Factory className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">厂里通</h1>
+          <p className="text-blue-100 mt-1 text-sm">轻量级制造执行系统</p>
+        </div>
+
+        {/* 注册卡片 */}
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-6 space-y-5">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-gray-800">创建账号</h2>
+            <p className="text-sm text-gray-500 mt-1">加入工厂，开始使用</p>
+          </div>
+
+          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+            {/* 姓名 */}
+            <div className="space-y-1.5">
+              <label htmlFor="name" className="text-sm font-medium text-gray-700">
+                姓名
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="name"
+                  placeholder="请输入姓名"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="pl-10 h-11"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">手机号</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="请输入手机号"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                maxLength={11}
-              />
+            {/* 手机号 */}
+            <div className="space-y-1.5">
+              <label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                手机号
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="请输入手机号"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={11}
+                  className="pl-10 h-11"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>所属工厂</Label>
-              <Select value={tenantId} onValueChange={(v) => setTenantId(v || "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择工厂" />
+            {/* 所属工厂 */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">所属工厂</label>
+              <Select
+                value={tenantId}
+                onValueChange={(v) => setTenantId(v || "")}
+              >
+                <SelectTrigger className="h-11">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-gray-400" />
+                    <SelectValue placeholder="请选择工厂" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   {tenants.map((t) => (
@@ -118,26 +161,53 @@ export default function RegisterPage() {
               </Select>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* 错误提示 */}
+            {error && (
+              <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
 
+            {/* 注册按钮 */}
             <button
               type="button"
               onClick={doRegister}
               disabled={loading}
-              className="w-full inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground h-12 px-4 text-sm font-medium transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+              className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-50 disabled:pointer-events-none"
             >
-              {loading ? "注册中..." : "注册"}
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  注册中...
+                </>
+              ) : (
+                <>
+                  注册
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </button>
+          </form>
 
-            <p className="text-sm text-gray-500 text-center">
+          {/* 登录链接 */}
+          <div className="text-center pt-2 border-t border-gray-100">
+            <p className="text-sm text-gray-500">
               已有账号？{" "}
-              <Link href="/login" className="text-primary hover:underline">
+              <Link
+                href="/login"
+                className="text-blue-600 font-medium hover:text-blue-700 transition-colors"
+              >
                 去登录
               </Link>
             </p>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+
+        {/* 底部 */}
+        <p className="text-center text-blue-100/60 text-xs mt-6">
+          &copy; {new Date().getFullYear()} 厂里通 MES
+        </p>
+      </div>
     </div>
   );
 }

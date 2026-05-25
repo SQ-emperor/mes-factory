@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getQualityStats, getQualityRecords } from "@/lib/actions/quality";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { QualityAnomaly } from "@/components/quality-anomaly";
 
 const typeLabels: Record<string, string> = {
   incoming: "来料检",
@@ -99,6 +100,9 @@ export default async function QualityPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* AI 质量分析 */}
+      <QualityAnomaly />
 
       {/* 缺陷类型分布 */}
       {stats.defectTypes.length > 0 && (

@@ -41,3 +41,20 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# IDE 配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 编译生成的文件
+*.exe
+*.class
+*.o
+*.dll
+
+# 临时文件
+*.log
+*.tmp
+*.bak

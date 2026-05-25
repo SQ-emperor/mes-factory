@@ -21,8 +21,10 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { getOrderScanInfo, submitWorkReport, getActiveOrdersForScan } from "@/lib/actions/work-report";
+import { suggestQuantity } from "@/lib/actions/ai";
 import { useScan } from "@/hooks/use-scan";
 import { useOffline } from "@/hooks/use-offline";
+import { Sparkles } from "lucide-react";
 
 interface ScanResult {
   orderId: string;
@@ -67,6 +69,8 @@ export default function ScanPage() {
   > | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
+  const [aiSuggestion, setAiSuggestion] = useState<{ suggested: number; reason: string } | null>(null);
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
 
   const fetchActiveOrders = useCallback(async () => {
     setLoadingOrders(true);
@@ -108,6 +112,21 @@ export default function ScanPage() {
       }
       setScanResult(result);
       setSubmitted(false);
+
+      // AI 建议数量
+      if (result.orderId && !result.isCompleted) {
+        setLoadingSuggestion(true);
+        try {
+          const suggestion = await suggestQuantity(result.orderId);
+          if (suggestion.suggested) {
+            setAiSuggestion({ suggested: suggestion.suggested, reason: suggestion.reason || "" });
+          }
+        } catch {
+          // 静默失败
+        } finally {
+          setLoadingSuggestion(false);
+        }
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "扫码失败");
     } finally {
@@ -192,6 +211,7 @@ export default function ScanPage() {
     setSubmitted(false);
     setSubmittedInfo(null);
     setManualCode("");
+    setAiSuggestion(null);
   };
 
   // 手动同步
@@ -473,6 +493,36 @@ export default function ScanPage() {
                 min="1"
                 className="text-lg h-12"
               />
+
+              {/* AI 建议 */}
+              {loadingSuggestion && (
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                  AI 正在分析历史数据...
+                </div>
+              )}
+              {aiSuggestion && !loadingSuggestion && (
+                <button
+                  type="button"
+                  onClick={() => setQuantity(String(aiSuggestion.suggested))}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 hover:border-blue-300 transition-colors text-left"
+                >
+                  <Sparkles className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-blue-700">
+                        AI 建议: {aiSuggestion.suggested} 件
+                      </span>
+                      <span className="text-xs text-blue-400">点击填入</span>
+                    </div>
+                    {aiSuggestion.reason && (
+                      <p className="text-xs text-blue-500 mt-0.5 truncate">
+                        {aiSuggestion.reason}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              )}
             </div>
 
             {/* 不良品数量 */}
