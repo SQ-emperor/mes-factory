@@ -5,12 +5,11 @@ const config: CapacitorConfig = {
   appName: "厂里通",
   webDir: "public",
   server: {
-    url: "https://mes-factory-five.vercel.app",
+    url: "http://10.254.87.10:3000",
     cleartext: true,
-    androidScheme: "https",
+    androidScheme: "http",
     allowNavigation: [
-      "mes-factory-five.vercel.app",
-      "*.vercel.app",
+      "10.254.87.10",
     ],
   },
   android: {
