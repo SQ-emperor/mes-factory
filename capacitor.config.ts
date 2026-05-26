@@ -8,6 +8,10 @@ const config: CapacitorConfig = {
     url: "https://mes-factory-five.vercel.app",
     cleartext: true,
     androidScheme: "https",
+    allowNavigation: [
+      "mes-factory-five.vercel.app",
+      "*.vercel.app",
+    ],
   },
   android: {
     buildOptions: {
